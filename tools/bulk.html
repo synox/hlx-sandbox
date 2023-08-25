@@ -1,0 +1,87 @@
+<!-- based on https://thinktanked.org/tools/bulk/bulk.html -->
+<html>
+<head>
+    <title>bulk preview / publish</title>
+    <style>
+        textarea {
+            width: 100%;
+            height: 50%;
+            margin: 32px 0;
+        }
+        select, button {
+            padding: 10px 30px;
+        }
+
+        .logger {
+            font-family: 'Courier New', Courier, monospace;
+        }
+        p{
+            margin: 5px;
+        }
+        p.no-status {
+            background-color: lightgoldenrodyellow;
+        }
+        p.s-200 {
+            background-color: lightgreen;
+        }
+
+    </style>
+</head>
+<body>
+<textarea id="textarea"></textarea>
+<select id="select">
+    <option value="preview">preview</option>
+    <option value="live">publish</option>
+    <option value="index">index</option>
+</select>
+<button id="start">start</button>
+<div id="total"></div>
+
+<div id="logger">
+</div>
+
+<script>
+    const log = document.getElementById('logger');
+    const append = (string, status="unknown") => {
+        const p = document.createElement('p');
+        p.textContent = string;
+        p.classList.add("s-"+status);
+        log.append(p);
+    }
+
+    document.getElementById('start').addEventListener('click', () => {
+        let counter = 0;
+
+        const executeOperation = async (url) => {
+            const { hostname, pathname } = new URL(url);
+            const [branch, repo, owner] = hostname.split('.')[0].split('--');
+            const adminURL = `https://admin.hlx.page/${operation}/${owner}/${repo}/${branch}${pathname}`;
+            const resp = await fetch(adminURL, {
+                method: 'POST',
+            });
+            const text = await resp.text();
+            console.log(text);
+            counter += 1;
+            append(`${counter}/${total}: ${adminURL}`, resp.status);
+            document.getElementById('total').textContent = `${counter}/${total}`;
+        }
+
+        const dequeue = async () => {
+            while (urls.length) {
+                const url = urls.shift();
+                await executeOperation(url);
+            }
+        };
+
+        const operation = document.getElementById('select').value;
+        const concurrency = operation === 'live' ? 40 : 3;
+        const urls = document.getElementById('textarea').value.split('\n').map(e => e.trim());
+        const total = urls.length;
+        append(`URLs: ${urls.length}`);
+        for (let i = 0; i < concurrency; i += 1) {
+            dequeue();
+        }
+    });
+</script>
+</body>
+</html>
